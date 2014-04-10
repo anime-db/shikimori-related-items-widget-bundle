@@ -1,0 +1,23 @@
+{% extends 'AnimeDbCatalogBundle:Widget:layout.html.twig' %}
+
+{% block title %}{% trans %}Related items on Shikimori.org{% endtrans %}{% endblock %}
+
+{% set widget_class = 'shikimori' %}
+
+{% block content %}
+<style type="text/css">
+.widget-section.shikimori .list-items .item {
+	margin: 5px
+}
+.widget-section.shikimori .list-items .item,
+.widget-section.shikimori .list-items .name {
+	width: 190px;
+	height: 296px;
+}
+.widget-section.shikimori .item img {
+	width: 190px;
+	max-height: 296px;
+}
+</style>
+{% include 'AnimeDbCatalogBundle:Widget:list-items.html.twig' %}
+{% endblock %}

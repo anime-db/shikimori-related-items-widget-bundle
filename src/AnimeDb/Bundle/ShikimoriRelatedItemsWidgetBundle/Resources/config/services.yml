@@ -1,0 +1,5 @@
+services:
+    anime_db.shikimori.widget.related_items:
+        class: AnimeDb\Bundle\ShikimoriRelatedItemsWidgetBundle\Event\Listener\Widget
+        tags:
+            - { name: kernel.event_listener, event: anime_db.widget.get, method: onGetWidget }
