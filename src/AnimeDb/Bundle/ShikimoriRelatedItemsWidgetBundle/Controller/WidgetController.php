@@ -123,7 +123,7 @@ class WidgetController extends Controller
             foreach ($list as $item) {
                 if ($item['anime']) {
                     $ids[] = $item['anime']['id'];
-                    $tmp[] = $item['anime'];
+                    $tmp[] = $item;
                 }
             }
             $list = $tmp;
@@ -178,18 +178,23 @@ class WidgetController extends Controller
     ) {
         $entity = new ItemWidget();
         // get item info
-        $info = $browser->get(str_replace('#ID#', $item['id'], self::PATH_ITEM_INFO));
+        $info = $browser->get(str_replace('#ID#', $item['anime']['id'], self::PATH_ITEM_INFO));
 
         // set name
-        if ($locale == 'ru' && $item['russian']) {
-            $entity->setName($item['russian']);
+        if ($locale == 'ru' && $item['anime']['russian']) {
+            $entity->setName($item['anime']['russian']);
         } elseif ($locale == 'ja' && $info['japanese']) {
             $entity->setName($info['japanese'][0]);
         } else {
-            $entity->setName($item['name']);
+            $entity->setName($item['anime']['name']);
         }
-        $entity->setLink($browser->getHost().$item['url']);
-        $entity->setCover($browser->getHost().$item['image']['original']);
+        if ($locale == 'ru') {
+            $entity->setName($entity->getName().' ('.$item['relation_russian'].')');
+        } else {
+            $entity->setName($entity->getName().' ('.$item['relation'].')');
+        }
+        $entity->setLink($browser->getHost().$item['anime']['url']);
+        $entity->setCover($browser->getHost().$item['anime']['image']['original']);
 
         // set type
         $type = new TypeWidget();
@@ -225,7 +230,7 @@ class WidgetController extends Controller
         if ($source instanceof Source) {
             $entity->setItem($source->getItem());
         } elseif ($filler instanceof Filler) {
-            $entity->setLinkForFill($filler->getLinkForFill($browser->getHost().$item['url']));
+            $entity->setLinkForFill($filler->getLinkForFill($browser->getHost().$item['anime']['url']));
         }
 
         return $entity;
