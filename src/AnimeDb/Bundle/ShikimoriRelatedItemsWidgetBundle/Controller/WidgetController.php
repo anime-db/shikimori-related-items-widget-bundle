@@ -71,13 +71,6 @@ class WidgetController extends Controller
     const ANI_DB_URL = 'http://anidb.net/perl-bin/animedb.pl?show=anime&aid=#ID#';
 
     /**
-     * Cache lifetime 1 day
-     *
-     * @var integer
-     */
-    const CACHE_LIFETIME = 86400;
-
-    /**
      * New items
      *
      * @param \AnimeDb\Bundle\CatalogBundle\Entity\Item $item
@@ -89,26 +82,13 @@ class WidgetController extends Controller
     {
         $response = new Response();
         // update cache if app update and Etag not Modified
-        if (($last_update = $this->container->getParameter('last_update')) && $request->getETags()) {
+        if ($last_update = $this->container->getParameter('last_update')) {
             $response->setLastModified(new \DateTime($last_update));
         }
-        // check items last update
-        /* @var $repository \AnimeDb\Bundle\CatalogBundle\Repository\Item */
-        $repository = $this->getDoctrine()->getRepository('AnimeDbCatalogBundle:Item');
-        $last_update = $repository->getLastUpdate();
-        if ($response->getLastModified() < $last_update) {
-            $response->setLastModified($last_update);
+        // item last update
+        if ($response->getLastModified() < $item->getDateUpdate()) {
+            $response->setLastModified($item->getDateUpdate());
         }
-
-        $response->setMaxAge(self::CACHE_LIFETIME);
-        $response->setSharedMaxAge(self::CACHE_LIFETIME);
-        $response->setExpires((new \DateTime())->modify('+'.self::CACHE_LIFETIME.' seconds'));
-        // response was not modified for this request
-        if ($response->isNotModified($request)) {
-            return $response;
-        }
-
-        $etag = $repository->count().':';
 
         /* @var $browser \AnimeDb\Bundle\ShikimoriBrowserBundle\Service\Browser */
         $browser = $this->get('anime_db.shikimori.browser');
@@ -131,18 +111,17 @@ class WidgetController extends Controller
         $list = $browser->get(str_replace('#ID#', $item_id, self::PATH_RELATED_ITEMS));
         // create Etag by list items
         if ($list) {
-            $ids = [];
+            $ids = '';
             $tmp = [];
             foreach ($list as $item) {
                 if ($item['anime']) {
-                    $ids[] = $item['anime']['id'];
+                    $ids = ':'.$item['anime']['id'];
                     $tmp[] = $item;
                 }
             }
             $list = $tmp;
-            $etag .= implode(':', $ids);
+            $response->setEtag(md5($ids));
         }
-        $response->setEtag(md5($etag));
 
         // response was not modified for this request
         if ($response->isNotModified($request) || !$list) {
