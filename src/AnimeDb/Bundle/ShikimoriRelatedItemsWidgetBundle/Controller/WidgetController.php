@@ -71,6 +71,13 @@ class WidgetController extends Controller
     const ANI_DB_URL = 'http://anidb.net/perl-bin/animedb.pl?show=anime&aid=#ID#';
 
     /**
+     * Cache lifetime 1 week
+     *
+     * @var integer
+     */
+    const CACHE_LIFETIME = 604800;
+
+    /**
      * New items
      *
      * @param \AnimeDb\Bundle\CatalogBundle\Entity\Item $item
@@ -81,6 +88,10 @@ class WidgetController extends Controller
     public function indexAction(Item $item, Request $request)
     {
         $response = new Response();
+        $response->setMaxAge(self::CACHE_LIFETIME);
+        $response->setSharedMaxAge(self::CACHE_LIFETIME);
+        $response->setExpires((new \DateTime())->modify('+'.self::CACHE_LIFETIME.' seconds'));
+
         // update cache if app update and Etag not Modified
         if ($last_update = $this->container->getParameter('last_update')) {
             $response->setLastModified(new \DateTime($last_update));
