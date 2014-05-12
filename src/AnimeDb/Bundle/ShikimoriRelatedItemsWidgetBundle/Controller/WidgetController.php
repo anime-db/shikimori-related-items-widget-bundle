@@ -14,14 +14,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Doctrine\ORM\EntityRepository;
-use Symfony\Bundle\FrameworkBundle\Translation\Translator;
 use AnimeDb\Bundle\ShikimoriBrowserBundle\Service\Browser;
 use AnimeDb\Bundle\ShikimoriFillerBundle\Service\Filler;
 use AnimeDb\Bundle\CatalogBundle\Entity\Item;
 use AnimeDb\Bundle\CatalogBundle\Entity\Source;
 use AnimeDb\Bundle\CatalogBundle\Entity\Widget\Item as ItemWidget;
-use AnimeDb\Bundle\CatalogBundle\Entity\Widget\Genre as GenreWidget;
-use AnimeDb\Bundle\CatalogBundle\Entity\Widget\Type as TypeWidget;
 
 /**
  * Similar items widget
@@ -152,7 +149,6 @@ class WidgetController extends Controller
             return $response;
         }
 
-        $translator = $this->get('translator');
         $repository = $this->getDoctrine()->getRepository('AnimeDbCatalogBundle:Source');
         $locale = substr($request->getLocale(), 0, 2);
         $filler = null;
@@ -162,7 +158,7 @@ class WidgetController extends Controller
 
         // build list item entities
         foreach ($list as $key => $item) {
-            $list[$key] = $this->buildItem($item, $locale, $repository, $translator, $browser, $filler);
+            $list[$key] = $this->buildItem($item, $locale, $repository, $browser, $filler);
         }
 
         return $this->render(
@@ -178,7 +174,6 @@ class WidgetController extends Controller
      * @param array $item
      * @param string $locale
      * @param \Doctrine\ORM\EntityRepository $repository
-     * @param \Symfony\Bundle\FrameworkBundle\Translation\Translator $translator
      * @param \AnimeDb\Bundle\ShikimoriBrowserBundle\Service\Browser $browser
      * @param \AnimeDb\Bundle\ShikimoriFillerBundle\Service\Filler $filler
      *
@@ -188,7 +183,6 @@ class WidgetController extends Controller
         array $item,
         $locale,
         EntityRepository $repository,
-        Translator $translator,
         Browser $browser,
         Filler $filler = null
     ) {
@@ -211,24 +205,6 @@ class WidgetController extends Controller
         }
         $entity->setLink($browser->getHost().$item['anime']['url']);
         $entity->setCover($browser->getHost().$item['anime']['image']['original']);
-
-        // set type
-        $type = new TypeWidget();
-        $type->setName($translator->trans($info['kind'], [], 'shikimori'));
-        $type->setLink($browser->getHost().'/animes/type/'.$info['kind']);
-        $entity->setType($type);
-
-        // add genres
-        foreach ($info['genres'] as $genre_info) {
-            $genre = new GenreWidget();
-            if ($locale == 'ru') {
-                $genre->setName($genre_info['russian']);
-            } else {
-                $genre->setName($genre_info['name']);
-            }
-            $genre->setLink($browser->getHost().'/animes/genre/'.$genre_info['id'].'-'.$genre_info['name']);
-            $entity->addGenre($genre);
-        }
 
         // find item by sources
         $sources = [$entity->getLink()];
