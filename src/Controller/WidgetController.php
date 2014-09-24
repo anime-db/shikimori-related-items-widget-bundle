@@ -13,12 +13,7 @@ namespace AnimeDb\Bundle\ShikimoriRelatedItemsWidgetBundle\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Doctrine\ORM\EntityRepository;
-use AnimeDb\Bundle\ShikimoriBrowserBundle\Service\Browser;
-use AnimeDb\Bundle\ShikimoriFillerBundle\Service\Filler;
 use AnimeDb\Bundle\CatalogBundle\Entity\Item;
-use AnimeDb\Bundle\CatalogBundle\Entity\Source;
-use AnimeDb\Bundle\CatalogBundle\Entity\Widget\Item as ItemWidget;
 
 /**
  * Similar items widget
