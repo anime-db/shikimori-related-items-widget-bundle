@@ -76,21 +76,9 @@ class WidgetController extends Controller
 
         $list = $this->get('anime_db.shikimori.browser')
             ->get(str_replace('#ID#', $item_id, self::PATH_RELATED_ITEMS));
+        $list = $this->filter($list);
 
-        // create Etag by list items
-        $ids = '';
-        if ($list) {
-            $tmp = [];
-            foreach ($list as $item) {
-                if ($item['anime']) {
-                    $ids = ':'.$item['anime']['id'];
-                    $tmp[] = $item;
-                }
-            }
-            $list = $tmp;
-        }
-        $response->setEtag(md5($ids));
-
+        $response->setEtag($this->hash($list));
         // response was not modified for this request
         if ($response->isNotModified($request) || !$list) {
             return $response;
@@ -112,5 +100,39 @@ class WidgetController extends Controller
             ['items' => $list],
             $response
         );
+    }
+
+    /**
+     * Filter a list items
+     *
+     * @param array $list
+     *
+     * @return array
+     */
+    protected function filter(array $list)
+    {
+        $tmp = [];
+        foreach ($list as $item) {
+            if ($item['anime']) {
+                $tmp[] = $item;
+            }
+        }
+        return $tmp;
+    }
+
+    /**
+     * Get hash of list items
+     *
+     * @param array $list
+     *
+     * @return string
+     */
+    protected function hash(array $list)
+    {
+        $ids = '';
+        foreach ($list as $item) {
+            $ids .= ':'.$item['anime']['id'];
+        }
+        return md5($ids);
     }
 }
