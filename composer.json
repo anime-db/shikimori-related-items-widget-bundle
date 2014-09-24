@@ -6,7 +6,14 @@
     "homepage": "http://github.com/anime-db/shikimori-related-items-widget-bundle",
     "version": "0.1.1",
     "autoload": {
-        "psr-0": { "AnimeDb\\Bundle\\ShikimoriRelatedItemsWidgetBundle": "src/" }
+        "psr-4": {
+            "AnimeDb\\Bundle\\ShikimoriRelatedItemsWidgetBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AnimeDb\\Bundle\\ShikimoriRelatedItemsWidgetBundle\\Tests\\": "tests/"
+        }
     },
     "require": {
         "php": ">=5.4.0",
