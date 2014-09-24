@@ -36,41 +36,6 @@ class WidgetController extends Controller
     const PATH_RELATED_ITEMS = '/animes/#ID#/related';
 
     /**
-     * API path for get item info
-     *
-     * @var string
-     */
-    const PATH_ITEM_INFO = '/animes/#ID#';
-
-    /**
-     * RegExp for get item id
-     *
-     * @var string
-     */
-    const REG_ITEM_ID = '#/animes/(?<id>\d+)\-#';
-
-    /**
-     * World-art item url
-     *
-     * @var string
-     */
-    const WORLD_ART_URL = 'http://www.world-art.ru/animation/animation.php?id=#ID#';
-
-    /**
-     * MyAnimeList item url
-     *
-     * @var string
-     */
-    const MY_ANIME_LIST_URL = 'http://myanimelist.net/anime/#ID#';
-
-    /**
-     * AniDB item url
-     *
-     * @var string
-     */
-    const ANI_DB_URL = 'http://anidb.net/perl-bin/animedb.pl?show=anime&aid=#ID#';
-
-    /**
      * Cache lifetime 1 week
      *
      * @var integer
@@ -101,28 +66,20 @@ class WidgetController extends Controller
             $response->setLastModified($item->getDateUpdate());
         }
 
-        /* @var $browser \AnimeDb\Bundle\ShikimoriBrowserBundle\Service\Browser */
-        $browser = $this->get('anime_db.shikimori.browser');
+        /* @var $widget \AnimeDb\Bundle\ShikimoriWidgetBundle\Service\Widget */
+        $widget = $this->get('anime_db.shikimori.widget');
 
         // get shikimori item id
-        /* @var $source \AnimeDb\Bundle\CatalogBundle\Entity\Source */
-        foreach ($item->getSources() as $source) {
-            if (strpos($source->getUrl(), $browser->getHost()) === 0 &&
-                preg_match(self::REG_ITEM_ID, $source->getUrl(), $match)
-            ) {
-                $item_id = $match['id'];
-                break;
-            }
-        }
-
-        if (empty($item_id)) {
+        if (!($item_id = $widget->getItemId($item))) {
             return $response;
         }
 
-        $list = $browser->get(str_replace('#ID#', $item_id, self::PATH_RELATED_ITEMS));
+        $list = $this->get('anime_db.shikimori.browser')
+            ->get(str_replace('#ID#', $item_id, self::PATH_RELATED_ITEMS));
+
         // create Etag by list items
+        $ids = '';
         if ($list) {
-            $ids = '';
             $tmp = [];
             foreach ($list as $item) {
                 if ($item['anime']) {
@@ -131,24 +88,23 @@ class WidgetController extends Controller
                 }
             }
             $list = $tmp;
-            $response->setEtag(md5($ids));
         }
+        $response->setEtag(md5($ids));
 
         // response was not modified for this request
         if ($response->isNotModified($request) || !$list) {
             return $response;
         }
 
-        $repository = $this->getDoctrine()->getRepository('AnimeDbCatalogBundle:Source');
-        $locale = substr($request->getLocale(), 0, 2);
-        $filler = null;
-        if ($this->has('anime_db.shikimori.filler')) {
-            $filler = $this->get('anime_db.shikimori.filler');
-        }
-
         // build list item entities
         foreach ($list as $key => $item) {
-            $list[$key] = $this->buildItem($item, $locale, $repository, $browser, $filler);
+            $list[$key] = $widget->getWidgetItem($widget->getItem($item['anime']['id']));
+            // add relation
+            if (substr($this->container->getParameter('locale'), 0, 2) == 'ru') {
+                $list[$key]->setName($list[$key]->getName().' ('.$item['relation_russian'].')');
+            } else {
+                $list[$key]->setName($list[$key]->getName().' ('.$item['relation'].')');
+            }
         }
 
         return $this->render(
@@ -156,65 +112,5 @@ class WidgetController extends Controller
             ['items' => $list],
             $response
         );
-    }
-
-    /**
-     * Build item entity
-     *
-     * @param array $item
-     * @param string $locale
-     * @param \Doctrine\ORM\EntityRepository $repository
-     * @param \AnimeDb\Bundle\ShikimoriBrowserBundle\Service\Browser $browser
-     * @param \AnimeDb\Bundle\ShikimoriFillerBundle\Service\Filler $filler
-     *
-     * @return \AnimeDb\Bundle\CatalogBundle\Entity\Widget\Item
-     */
-    protected function buildItem(
-        array $item,
-        $locale,
-        EntityRepository $repository,
-        Browser $browser,
-        Filler $filler = null
-    ) {
-        $entity = new ItemWidget();
-        // get item info
-        $info = $browser->get(str_replace('#ID#', $item['anime']['id'], self::PATH_ITEM_INFO));
-
-        // set name
-        if ($locale == 'ru' && $item['anime']['russian']) {
-            $entity->setName($item['anime']['russian']);
-        } elseif ($locale == 'ja' && $info['japanese']) {
-            $entity->setName($info['japanese'][0]);
-        } else {
-            $entity->setName($item['anime']['name']);
-        }
-        if ($locale == 'ru') {
-            $entity->setName($entity->getName().' ('.$item['relation_russian'].')');
-        } else {
-            $entity->setName($entity->getName().' ('.$item['relation'].')');
-        }
-        $entity->setLink($browser->getHost().$item['anime']['url']);
-        $entity->setCover($browser->getHost().$item['anime']['image']['original']);
-
-        // find item by sources
-        $sources = [$entity->getLink()];
-        if (!empty($info['world_art_id'])) {
-            $sources[] = str_replace('#ID#', $info['world_art_id'], self::WORLD_ART_URL);
-        }
-        if (!empty($info['myanimelist_id'])) {
-            $sources[] = str_replace('#ID#', $info['myanimelist_id'], self::MY_ANIME_LIST_URL);
-        }
-        if (!empty($info['ani_db_id'])) {
-            $sources[] = str_replace('#ID#', $info['ani_db_id'], self::ANI_DB_URL);
-        }
-        /* @var $source \AnimeDb\Bundle\CatalogBundle\Entity\Source|null */
-        $source = $repository->findOneByUrl($sources);
-        if ($source instanceof Source) {
-            $entity->setItem($source->getItem());
-        } elseif ($filler instanceof Filler) {
-            $entity->setLinkForFill($filler->getLinkForFill($browser->getHost().$item['anime']['url']));
-        }
-
-        return $entity;
     }
 }
