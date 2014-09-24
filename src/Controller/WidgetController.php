@@ -12,7 +12,6 @@ namespace AnimeDb\Bundle\ShikimoriRelatedItemsWidgetBundle\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use AnimeDb\Bundle\CatalogBundle\Entity\Item;
 
 /**
@@ -47,20 +46,8 @@ class WidgetController extends Controller
      */
     public function indexAction(Item $item, Request $request)
     {
-        $response = new Response();
-        $response->setMaxAge(self::CACHE_LIFETIME);
-        $response->setSharedMaxAge(self::CACHE_LIFETIME);
-        $response->setExpires((new \DateTime())->modify('+'.self::CACHE_LIFETIME.' seconds'));
-
-        // update cache if app update and Etag not Modified
-        if ($last_update = $this->container->getParameter('last_update')) {
-            $response->setLastModified(new \DateTime($last_update));
-        }
-        // item last update
-        if ($response->getLastModified() < $item->getDateUpdate()) {
-            $response->setLastModified($item->getDateUpdate());
-        }
-
+        /* @var $response \Symfony\Component\HttpFoundation\Response */
+        $response = $this->get('cache_time_keeper')->getResponse($item->getDateUpdate(), self::CACHE_LIFETIME);
         /* @var $widget \AnimeDb\Bundle\ShikimoriWidgetBundle\Service\Widget */
         $widget = $this->get('anime_db.shikimori.widget');
 
